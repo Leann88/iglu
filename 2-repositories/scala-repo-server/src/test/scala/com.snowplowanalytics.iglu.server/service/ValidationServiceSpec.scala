@@ -18,14 +18,17 @@ package service
 // Scala
 import scala.concurrent.duration._
 
+// Akka Http
+import akka.http.scaladsl.testkit.{RouteTestTimeout, Specs2RouteTest}
+import akka.http.scaladsl.model.StatusCodes._
+
 // Specs2
 import org.specs2.mutable.Specification
 import org.specs2.time.NoTimeConversions
 
 // Spray
-import spray.http._
-import StatusCodes._
-import spray.testkit.Specs2RouteTest
+//import spray.http._
+//import spray.testkit.Specs2RouteTest
 
 class ValidationServiceSpec extends Specification
   with Api with Specs2RouteTest with NoTimeConversions with SetupAndDestroy {

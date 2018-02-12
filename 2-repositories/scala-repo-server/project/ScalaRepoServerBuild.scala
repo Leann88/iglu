@@ -41,13 +41,12 @@ object ScalaRepoServerBuild extends Build {
         Libraries.slick,
         Libraries.slickpg,
         Libraries.slickpgJoda,
-        Libraries.sprayCan,
-        Libraries.sprayRouting,
-        Libraries.swagger,
+        Libraries.akkaHttp,
+        Libraries.swaggerAkkaHttp,
         // Scala (test only)
         Libraries.akkaTestKit,
         Libraries.specs2,
-        Libraries.sprayTestKit
+        Libraries.akkaHttpTestKit
       )
     )
 }

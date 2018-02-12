@@ -27,42 +27,52 @@ import akka.pattern.ask
 import scala.concurrent.ExecutionContext
 import scala.reflect.ClassTag
 
+// Akka Http
+import akka.http.scaladsl.model.MediaTypes._
+import akka.http.scaladsl.model.StatusCode
+import akka.http.scaladsl.model.StatusCodes._
+import akka.http.scaladsl.server.Directive1
+import akka.http.scaladsl.server.Directives
+import akka.http.scaladsl.server.directives.SecurityDirectives.authenticateBasic
+
 // Spray
-import spray.http.MediaTypes._
-import spray.http.StatusCode
-import spray.http.StatusCodes._
-import spray.routing._
+//import spray.http.MediaTypes._
+//import spray.http.StatusCode
+//import spray.http.StatusCodes._
+//import spray.routing._
 
 // Swagger
-import com.wordnik.swagger.annotations._
+import io.swagger.annotations.{Api, ApiImplicitParam, ApiImplicitParams, ApiOperation, ApiResponse, ApiResponses}
+
 
 /**
- * Service to interact with API keys.
- * @constructor create a new API key generation service with an apiKey actor
- * @param apiKeyActor a reference to a ``ApiKeyActor``
- */
+  * Service to interact with API keys.
+  * @constructor create a new API key generation service with an apiKey actor
+  * @param apiKeyActor a reference to a ``ApiKeyActor``
+  */
 @Api(value = "/api/auth/keygen", position = 2,
   description = """Operations dealing with API key generation and deletion,
   requires a super API key""")
 class ApiKeyGenService(apiKeyActor: ActorRef)
-(implicit executionContext: ExecutionContext) extends Directives with Service {
+                      (implicit executionContext: ExecutionContext) extends Directives with Service {
 
   /**
-   * Creates a ``TokenAuthenticator`` to extract the apikey http header and
-   * validates it against the database.
-   */
+    * Creates a ``TokenAuthenticator`` to extract the apikey http header and
+    * validates it against the database.
+    */
   val authenticator = TokenAuthenticator[(String, String)]("apikey") {
     key => (apiKeyActor ? GetKey(key)).mapTo[Option[(String, String)]]
   }
 
   /**
-   * Directive to authenticate a user using the authenticator.
-   */
+    * Directive to authenticate a user using the authenticator.
+    */
   def auth: Directive1[(String, String)] = authenticate(authenticator)
 
+
   /**
-   * API key generation service's route
-   */
+    * API key generation service's route
+    */
   lazy val routes =
     rejectEmptyResponse {
       path("keygen") {
@@ -72,10 +82,10 @@ class ApiKeyGenService(apiKeyActor: ActorRef)
               post {
                 addRoute
               } ~
-              delete {
-                deleteKeysRoute ~
-                deleteKeyRoute
-              }
+                delete {
+                  deleteKeysRoute ~
+                    deleteKeyRoute
+                }
             } else {
               complete(Unauthorized, "You do not have sufficient privileges")
             }
@@ -85,8 +95,8 @@ class ApiKeyGenService(apiKeyActor: ActorRef)
     }
 
   /**
-   * Route to generate a pair of read and read and write API keys.
-   */
+    * Route to generate a pair of read and read and write API keys.
+    */
   @ApiOperation(value = "Generates a pair of read and read/write API keys",
     notes = "Returns a pair of API keys", httpMethod = "POST")
   @ApiImplicitParams(Array(
@@ -106,15 +116,15 @@ class ApiKeyGenService(apiKeyActor: ActorRef)
     new ApiResponse(code = 500, message = "Something went wrong")
   ))
   def addRoute =
-    (anyParam('vendor_prefix) | entity(as[String])) { vendorPrefix =>
+    (parameter('vendor_prefix) | formField('vendor_prefix) | entity(as[String])) { vendorPrefix =>
       complete {
         (apiKeyActor ? AddBothKey(vendorPrefix)).mapTo[(StatusCode, String)]
       }
     }
 
   /**
-   * Route to delete every API key having a specific vendor prefix.
-   */
+    * Route to delete every API key having a specific vendor prefix.
+    */
   @ApiOperation(value = "Deletes every API key having this vendor prefix",
     httpMethod = "DELETE")
   @ApiImplicitParams(Array(
@@ -134,15 +144,15 @@ class ApiKeyGenService(apiKeyActor: ActorRef)
     new ApiResponse(code = 404, message = "Vendor prefix not found")
   ))
   def deleteKeysRoute =
-    anyParam('vendor_prefix) { owner =>
+    (parameter('vendor_prefix) | formField('vendor_prefix)) { owner =>
       complete {
         (apiKeyActor ? DeleteKeys(owner)).mapTo[(StatusCode, String)]
       }
     }
 
   /**
-   * Route to delete a single API key.
-   */
+    * Route to delete a single API key.
+    */
   @ApiOperation(value = "Deletes a single API key", httpMethod = "DELETE")
   @ApiImplicitParams(Array(
     new ApiImplicitParam(name = "key", value = "API key to be deleted",
@@ -162,7 +172,7 @@ class ApiKeyGenService(apiKeyActor: ActorRef)
     new ApiResponse(code = 500, message = "Something went wrong")
   ))
   def deleteKeyRoute =
-    anyParam('key) { key =>
+    (parameter('key) | formField('key)) { key =>
       complete {
         (apiKeyActor ? DeleteKey(key)).mapTo[(StatusCode, String)]
       }

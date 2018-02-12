@@ -19,9 +19,12 @@ package util
 // Scala
 import scala.concurrent.{ ExecutionContext, Future }
 
+// Akka Http
+import akka.http.scaladsl.server.{AuthenticationFailedRejection, RequestContext}
+
 // Spray
-import spray.routing.{ RequestContext, AuthenticationFailedRejection }
-import spray.routing.authentication.{ Authentication, ContextAuthenticator }
+//import spray.routing.{ RequestContext, AuthenticationFailedRejection }
+//import spray.routing.authentication.{ Authentication, ContextAuthenticator }
 
 /**
  * Object letting us authenticate users.

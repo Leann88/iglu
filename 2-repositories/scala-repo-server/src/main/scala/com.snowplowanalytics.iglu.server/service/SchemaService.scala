@@ -28,15 +28,23 @@ import akka.pattern.ask
 import scala.concurrent.ExecutionContext
 import scala.reflect.ClassTag
 
+// Akka Http
+import akka.http.scaladsl.model.MediaTypes._
+import akka.http.scaladsl.model.StatusCode
+import akka.http.scaladsl.model.StatusCodes._
+import akka.http.scaladsl.server.Directive1
+import akka.http.scaladsl.server.Directives
+
 // Spray
-import spray.http.StatusCodes._
-import spray.http.StatusCode
-import spray.http.MediaTypes._
-import spray.routing._
-import spray.routing.PathMatcher.Lift
+//import spray.http.StatusCodes._
+//import spray.http.StatusCode
+//import spray.http.MediaTypes._
+//import spray.routing._
+//import spray.routing.PathMatcher.Lift
 
 // Swagger
-import com.wordnik.swagger.annotations._
+//import com.wordnik.swagger.annotations._
+import io.swagger.annotations.{Api, ApiImplicitParam, ApiImplicitParams, ApiOperation, ApiResponse, ApiResponses}
 import javax.ws.rs.Path
 
 /**
@@ -68,7 +76,7 @@ class SchemaService(schemaActor: ActorRef, apiKeyActor: ActorRef)
    * data) is self-describing.
    */
   def validateSchema(format: String): Directive1[String] =
-    anyParam('schema) | entity(as[String]) flatMap { schema =>
+    parameter('schema) | formField('schema) | entity(as[String]) flatMap { schema =>
       onSuccess((schemaActor ? ValidateSchema(schema, format))
           .mapTo[(StatusCode, String)]) flatMap { ext =>
             ext match {
@@ -167,7 +175,7 @@ class SchemaService(schemaActor: ActorRef, apiKeyActor: ActorRef)
   ))
   def addRoute(owner: String, permission: String) =
       path(VendorPattern / NamePattern / FormatPattern / VersionPattern) { (v, n, f, vs) =>
-          anyParam('isPublic.?) { isPublic =>
+        (parameter('isPublic.?) | formField('isPublic.?)) { isPublic =>
             validateSchema(f) { schema =>
               complete {
                 (schemaActor ? AddSchema(v, n, f, vs, schema, owner, permission,
@@ -217,7 +225,7 @@ class SchemaService(schemaActor: ActorRef, apiKeyActor: ActorRef)
   ))
   def updateRoute(owner: String, permission: String) =
       path(VendorPattern / NamePattern / FormatPattern / VersionPattern) { (v, n, f, vs) =>
-          anyParam('isPublic.?) { isPublic =>
+        (parameter('isPublic.?) | formField('isPublic.?)) { isPublic =>
             validateSchema(f) { schema =>
               complete {
                 (schemaActor ? UpdateSchema(v, n, f, vs, schema, owner,
@@ -235,7 +243,7 @@ class SchemaService(schemaActor: ActorRef, apiKeyActor: ActorRef)
    */
   def deleteRoute(owner: String, permission: String) =
       path(VendorPattern / NamePattern / FormatPattern / VersionPattern) { (v, n, f, vs) =>
-          anyParam('isPublic.?) { isPublic =>
+        (parameter('isPublic.?) | formField('isPublic.?)) { isPublic =>
             complete {
               (schemaActor ? DeleteSchema(v, n, f, vs, owner,
                 permission, isPublic == Some("true")))
@@ -267,7 +275,7 @@ class SchemaService(schemaActor: ActorRef, apiKeyActor: ActorRef)
     new ApiResponse(code = 404, message = "There are no schemas available here")
   ))
   def publicSchemasRoute(owner: String, permission: String) =
-    anyParam('filter.?) { filter =>
+    (parameter('filter.?) | formField('filter.?)) { filter =>
       filter match {
         case Some("metadata") => complete {
           (schemaActor ? GetPublicMetadata(owner, permission))
@@ -321,7 +329,7 @@ class SchemaService(schemaActor: ActorRef, apiKeyActor: ActorRef)
   ))
   def readRoute(v: List[String], n: List[String], f: List[String],
     vs: List[String], o: String, p: String) =
-      anyParam('filter.?) { filter =>
+      (parameter('filter.?) | formField('filter.?)) { filter =>
         filter match {
           case Some("metadata") => complete {
             (schemaActor ? GetMetadata(v, n, f, vs, o, p))
@@ -371,7 +379,7 @@ class SchemaService(schemaActor: ActorRef, apiKeyActor: ActorRef)
   ))
   def readFormatRoute(v: List[String], n: List[String], f: List[String],
     o: String, p: String) =
-      anyParam('filter.?) { filter =>
+      (parameter('filter.?) | formField('filter.?)) { filter =>
         filter match {
           case Some("metadata") => complete {
             (schemaActor ? GetMetadataFromFormat(v, n, f, o, p))
@@ -414,7 +422,7 @@ class SchemaService(schemaActor: ActorRef, apiKeyActor: ActorRef)
       message = "There are no schemas for this vendor, name combination")
   ))
   def readNameRoute(v: List[String], n: List[String], o: String, p: String) =
-    anyParam('filter.?) { filter =>
+    (parameter('filter.?) | formField('filter.?)) { filter =>
       filter match {
         case Some("metadata") => complete {
           (schemaActor ? GetMetadataFromName(v, n, o, p))
@@ -452,7 +460,7 @@ class SchemaService(schemaActor: ActorRef, apiKeyActor: ActorRef)
       message = "There are no schemas for this vendor")
   ))
   def readVendorRoute(v: List[String], o: String, p: String) =
-    anyParam('filter.?) { filter =>
+    (parameter('filter.?) | formField('filter.?)) { filter =>
       filter match {
         case Some("metadata") => complete {
           (schemaActor ? GetMetadataFromVendor(v, o, p))

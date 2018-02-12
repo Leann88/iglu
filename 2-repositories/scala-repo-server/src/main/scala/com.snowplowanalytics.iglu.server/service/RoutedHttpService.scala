@@ -16,28 +16,39 @@ package com.snowplowanalytics.iglu.server
 package service
 
 // Akka
-import akka.actor.{ Actor, ActorLogging }
+import akka.actor.{Actor, ActorLogging}
+
+import com.github.swagger.akka.{SwaggerGenerator, SwaggerHttpService}
+import io.swagger.model.ApiInfo
 
 // Scala
 import scala.reflect.runtime.universe._
 import scala.util.control.NonFatal
 
+// Akka Http
+import akka.http.scaladsl.model.HttpEntity
+import akka.http.scaladsl.server._
+import akka.http.scaladsl.settings.RoutingSettings
+import akka.http.scaladsl.model.MediaTypes._
+import akka.http.scaladsl.model.StatusCode
+import akka.http.scaladsl.model.StatusCodes._
+import akka.http.scaladsl.server.Directive1
+import akka.http.scaladsl.server.Directives
+
 // Spray
-import spray.http.StatusCodes._
-import spray.http.{ HttpEntity, StatusCode }
-import spray.routing._
-import spray.util.LoggingContext
+//import spray.http.StatusCodes._
+//import spray.http.{ HttpEntity, StatusCode }
+//import spray.routing._
+//import spray.util.LoggingContext
 
 // Swagger
-import com.gettyimages.spray.swagger._
-import com.wordnik.swagger.model.ApiInfo
 
 /**
- * HttpService used to run the different routes coming from the
- * ``SchemaService``, ``CatalogService`` and ``ApiKeyGenService``
- */
-class RoutedHttpService(route: Route) extends Actor with HttpService
-with ActorLogging {
+  * HttpService used to run the different routes coming from the
+  * ``SchemaService``, ``CatalogService`` and ``ApiKeyGenService``
+  */
+class RoutedHttpService(route: Route) extends Actor with HttpApp
+  with ActorLogging {
   implicit def actorRefFactory = context
 
   implicit val handler = ExceptionHandler {
@@ -53,7 +64,7 @@ with ActorLogging {
     RejectionHandler.Default, context, RoutingSettings.default,
     LoggingContext.fromActorRefFactory)
 
-  val swaggerService = new SwaggerHttpService {
+  val swaggerService = new SwaggerGenerator {
     override def apiTypes = Seq(typeOf[SchemaService], typeOf[ApiKeyGenService],
       typeOf[ValidationService])
     override def apiVersion = "0.2"
@@ -71,7 +82,7 @@ with ActorLogging {
 }
 
 case class ErrorResponseException(responseStatus: StatusCode,
-  response: Option[HttpEntity]) extends Exception
+                                  response: Option[HttpEntity]) extends Exception
 
 trait FailureHandling {
   this: HttpService =>
@@ -91,9 +102,9 @@ trait FailureHandling {
   }
 
   private def loggedFailureResponse(ctx: RequestContext, thrown: Throwable,
-    message: String = "The server is having problems",
-    error: StatusCode = InternalServerError)
-    (implicit log: LoggingContext): Unit = {
+                                    message: String = "The server is having problems",
+                                    error: StatusCode = InternalServerError)
+                                   (implicit log: LoggingContext): Unit = {
 
     log.error(thrown, ctx.request.toString)
     ctx.complete((error, message))

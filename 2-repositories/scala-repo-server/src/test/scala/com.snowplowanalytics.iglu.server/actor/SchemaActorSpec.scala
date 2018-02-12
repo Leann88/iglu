@@ -34,9 +34,9 @@ import org.specs2.mutable.SpecificationLike
 import org.specs2.mutable.Specification
 import org.specs2.time.NoTimeConversions
 
-// Spray
-import spray.http.StatusCode
-import spray.http.StatusCodes._
+// Akka Http
+import akka.http.scaladsl.model.StatusCode
+import akka.http.scaladsl.model.StatusCodes._
 
 class SchemaActorSpec extends TestKit(ActorSystem()) with SetupAndDestroy
   with ImplicitSender with NoTimeConversions {
